@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:camel="http://camel.apache.org/schema/spring"
+	xmlns:lang="http://www.springframework.org/schema/lang"
+	xsi:schemaLocation="
+         http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+         http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd 
+         http://www.springframework.org/schema/lang http://www.springframework.org/schema/lang/spring-lang-2.0.xsd">
+
+	<!-- MarkLogic -->
+	<lang:groovy id="marklogic" script-source="classpath:groovy/marklogic.groovy">
+		<lang:property name="host" value="YOURHOST" />
+		<lang:property name="port" value="YOURPORT" />
+		<lang:property name="user" value="YOURID" />
+		<lang:property name="password" value="YOURPASSWORD" />
+	</lang:groovy>
+
+	<!-- camelContext is the Camel runtime, where we can host Camel routes -->
+	<camelContext xmlns="http://camel.apache.org/schema/spring">
+	
+	<propertyPlaceholder id="properties" location="classpath:myprop.properties" />
+
+  <route id="jira">
+  <from uri="rss:https://issues.apache.org/jira/sr/jira.issueviews:searchrequest-xml/temp/SearchRequest.xml?jqlQuery=&amp;tempMax=100&amp;delay=10s"/>
+  <marshal><rss/></marshal>
+  <setHeader headerName="ml_doc">
+	<simple>/jira/${exchangeId}</simple>
+  </setHeader>
+  <to uri="seda:mlfeed"/>
+  </route>
+
+  <route id="marklogic">
+  <from uri="seda:mlfeed"/>
+  <to uri="bean:marklogic?method=upload_xml" />
+  <!-- <to uri="file:outbox"/> -->
+  </route>	
+</camelContext>
+
+</beans>
